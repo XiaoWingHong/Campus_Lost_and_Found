@@ -146,7 +146,7 @@ export function Sidebar({ currentPath, isAdmin, mobile = false }: SidebarProps) 
 
       <div className="px-4 py-3 border-t border-border">
         <p className="text-xs text-muted-foreground text-center">
-          v1.0
+          v1.1
         </p>
       </div>
     </aside>

@@ -189,7 +189,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-[#1A2744] py-5 text-center">
         <p className="text-xs text-white/30">
-          Campus Lost &amp; Found v1.0
+          Campus Lost &amp; Found - 2026
         </p>
       </footer>
     </div>
