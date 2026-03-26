@@ -1,7 +1,7 @@
 # Campus Lost and Found
 
 **Project:** Campus Lost and Found Web App Prototype  
-**Version:** 2.0  
+**Version:** 1.1  
 **Status:** Active Development
 
 ## Overview
