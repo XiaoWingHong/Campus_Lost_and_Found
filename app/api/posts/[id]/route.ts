@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
-import { getPostById, getUserById, getClaimByPostId, updatePost, appendSystemLog } from "@/lib/db";
+import { getPostById, getUserById, getClaimById, updatePost, appendSystemLog } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { updatePostSchema } from "@/lib/validators";
 import type { PostWithClaim } from "@/types";
@@ -21,7 +21,7 @@ export async function GET(
     }
 
     const author = getUserById(post.authorId);
-    const claim = post.claimId ? getClaimByPostId(post.id) ?? null : null;
+    const claim = post.claimId ? getClaimById(post.claimId) ?? null : null;
 
     const resolvedContact = {
       email: post.contactInfo.useDefault

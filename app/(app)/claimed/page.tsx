@@ -23,6 +23,7 @@ export default function ClaimedItemsPage() {
     try {
       const params = new URLSearchParams({
         status: "claimed",
+        claimedByMe: "true",
         page: page.toString(),
         limit: PAGE_SIZE.toString(),
       });

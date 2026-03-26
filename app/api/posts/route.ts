@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { v4 as uuidv4 } from "uuid";
 import Fuse from "fuse.js";
-import { getPosts, getUsers, createPost, getUserById } from "@/lib/db";
+import { getPosts, getUsers, createPost, getClaims } from "@/lib/db";
 import { getCurrentUser } from "@/lib/auth";
 import { createPostSchema } from "@/lib/validators";
 import type { Post, PostWithAuthor, User } from "@/types";
@@ -42,12 +42,15 @@ export async function GET(request: NextRequest) {
     const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "12", 10)));
     const authorId = searchParams.get("authorId");
+    const claimedByMe = searchParams.get("claimedByMe") === "true";
 
     const currentUser = await getCurrentUser();
     const isAdmin = currentUser?.role === "admin";
     const mine = searchParams.get("mine") === "true";
     const allPosts = getPosts();
     const allUsers = getUsers();
+    const allClaims = getClaims();
+    const claimById = new Map(allClaims.map((claim) => [claim.id, claim]));
 
     let filtered = allPosts;
 
@@ -99,6 +102,20 @@ export async function GET(request: NextRequest) {
 
     if (authorId) {
       filtered = filtered.filter((p) => p.authorId === authorId);
+    }
+
+    if (claimedByMe) {
+      if (!currentUser) {
+        return NextResponse.json(
+          { success: false, error: "Unauthorized" },
+          { status: 401 },
+        );
+      }
+      filtered = filtered.filter((post) => {
+        if (!post.claimId) return false;
+        const activeClaim = claimById.get(post.claimId);
+        return activeClaim?.claimerId === currentUser.id;
+      });
     }
 
     if (q && q.trim().length > 0) {
