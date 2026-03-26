@@ -67,12 +67,12 @@ export default function LoginPage() {
               L
             </div>
             <CardTitle className="font-serif text-2xl">Welcome Back</CardTitle>
-            <CardDescription>Sign in with your CityUHK EID</CardDescription>
+            <CardDescription>Sign in with your Campus EID</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="eid">CityUHK EID</Label>
+                <Label htmlFor="eid">Campus EID</Label>
                 <Input
                   id="eid"
                   placeholder=""

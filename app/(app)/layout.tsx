@@ -24,7 +24,7 @@ const PATH_TITLES: Record<string, string> = {
 function getTitle(pathname: string): string {
   if (PATH_TITLES[pathname]) return PATH_TITLES[pathname];
   if (pathname.startsWith("/lost-items/")) return "Item Details";
-  return "CityUHK Lost & Found";
+  return "Campus Lost & Found";
 }
 
 export default function AppLayout({

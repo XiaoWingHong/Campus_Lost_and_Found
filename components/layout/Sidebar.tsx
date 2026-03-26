@@ -66,7 +66,7 @@ export function Sidebar({ currentPath, isAdmin, mobile = false }: SidebarProps) 
         </div>
         <div>
           <h1 className="font-serif font-semibold text-base text-foreground leading-tight">
-            CityUHK
+            Campus
           </h1>
           <p className="text-xs text-muted-foreground leading-tight">
             Lost &amp; Found

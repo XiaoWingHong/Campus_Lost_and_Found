@@ -93,15 +93,8 @@ export default function HomePage() {
           transition={{ duration: 0.8, ease: "easeOut" }}
           className="relative z-10 text-center max-w-3xl mx-auto"
         >
-          <div className="inline-flex items-center gap-2 px-4 py-1.5 mb-8 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm">
-            <MapPin className="h-3.5 w-3.5 text-[#E8A020]" />
-            <span className="text-xs font-medium text-white/60 tracking-wide uppercase">
-              CityU of Hong Kong
-            </span>
-          </div>
-
           <h1 className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight text-white">
-            CityUHK
+            Campus
             <br />
             <span className="bg-gradient-to-r from-[#E8A020] to-[#F5C060] bg-clip-text text-transparent">
               Lost &amp; Found
@@ -196,7 +189,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="bg-[#1A2744] py-5 text-center">
         <p className="text-xs text-white/30">
-          CityU Lost &amp; Found v0.1.0
+          Campus Lost &amp; Found v1.0
         </p>
       </footer>
     </div>

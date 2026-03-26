@@ -1,14 +1,14 @@
 # Campus Lost and Found
 
-**Project:** CityUHK Campus Lost and Found Web App Prototype  
+**Project:** Campus Lost and Found Web App Prototype  
 **Version:** 2.0  
 **Status:** Active Development
 
 ## Overview
-A campus-internal web application for CityUHK students and staff to report lost items, browse lost item posts, and claim found items. It integrates with an external campus Single Sign-On (SSO) system (simulated via EID login) to provide a trustworthy, authenticated environment without requiring traditional sign-ups.
+A web application for Campus students and staff to report lost items, browse lost item posts, and claim found items. It integrates with an external campus Single Sign-On (SSO) system (simulated via EID login) to provide a trustworthy, authenticated environment without requiring traditional sign-ups.
 
 ## Target Audience
-- **Primary:** CityUHK students and staff (regular users).
+- **Primary:** Campus students and staff (regular users).
 - **Secondary:** Campus administration and security staff (admin users).
 
 ## Core Capabilities

@@ -16,7 +16,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "CityUHK Lost & Found",
+  title: "Campus Lost & Found",
   description:
     "Campus Lost and Found System — Reuniting belongings with their owners across campus",
 };
