@@ -40,3 +40,7 @@ next-env.d.ts
 
 # data
 /data
+
+#Docker
+Dockerfile
+docker-compose.yml
