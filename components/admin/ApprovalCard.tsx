@@ -139,9 +139,11 @@ export function ApprovalCard({
               <span className="font-medium text-foreground">
                 {post.author.name}
               </span>
-              <Badge variant="outline" className="text-[10px] font-mono">
-                {maskEid(post.author.eid)}
-              </Badge>
+              {post.author.sid && (
+                <Badge variant="outline" className="text-[10px] font-mono">
+                  {post.author.sid}
+                </Badge>
+              )}
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <Mail className="h-4 w-4 shrink-0" />
