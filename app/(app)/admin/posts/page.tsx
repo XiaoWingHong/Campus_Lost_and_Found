@@ -359,7 +359,7 @@ export default function AdminPostsPage() {
 
             <div className="space-y-4 text-sm">
               {selectedPost.photos?.[0] && (
-                <div className="relative h-48 w-full rounded-xl overflow-hidden bg-muted">
+                <div className="relative h-96 w-full rounded-xl overflow-hidden bg-muted">
                   <Image
                     src={`${selectedPost.photos[0]}`}
                     alt={selectedPost.itemName}
