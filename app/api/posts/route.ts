@@ -34,6 +34,7 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const q = searchParams.get("q");
     const status = searchParams.get("status");
+    const statusListParam = searchParams.get("statuses");
     const category = searchParams.get("category");
     const location = searchParams.get("location");
     const dateFrom = searchParams.get("dateFrom");
@@ -64,7 +65,36 @@ export async function GET(request: NextRequest) {
       filtered = filtered.filter((p) => p.authorId === currentUser.id);
     }
 
-    if (status) {
+    const requestedStatuses = statusListParam
+      ? statusListParam
+          .split(",")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0)
+      : [];
+
+    if (requestedStatuses.length > 0) {
+      const requestedStatusSet = new Set(requestedStatuses);
+      filtered = filtered.filter((post) => requestedStatusSet.has(post.status));
+
+      // Only apply cross-user visibility restrictions when not explicitly scoped to "mine"
+      if (!mine && !isAdmin) {
+        const hasRestrictedStatus = requestedStatuses.some(
+          (requestedStatus) => requestedStatus !== "published" && requestedStatus !== "claimed",
+        );
+        if (hasRestrictedStatus) {
+          filtered = currentUser
+            ? filtered.filter(
+                (post) =>
+                  post.status === "published" ||
+                  post.status === "claimed" ||
+                  post.authorId === currentUser.id,
+              )
+            : filtered.filter(
+                (post) => post.status === "published" || post.status === "claimed",
+              );
+        }
+      }
+    } else if (status) {
       filtered = filtered.filter((p) => p.status === status);
 
       // Only apply cross-user visibility restrictions when not explicitly scoped to "mine"

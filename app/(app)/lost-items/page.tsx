@@ -12,8 +12,10 @@ import { PostGrid } from "@/components/posts/PostGrid";
 import type { PostWithAuthor, PaginatedResponse } from "@/types";
 
 const PAGE_SIZE = 12;
+type LostItemsTab = "all" | "published" | "claimed";
 
 export default function LostItemsPage() {
+  const [activeTab, setActiveTab] = useState<LostItemsTab>("published");
   const [search, setSearch] = useState("");
   const [filters, setFilters] = useState({
     category: "",
@@ -33,10 +35,14 @@ export default function LostItemsPage() {
     setIsLoading(true);
     try {
       const params = new URLSearchParams({
-        status: "published",
         page: page.toString(),
         limit: PAGE_SIZE.toString(),
       });
+      if (activeTab === "all") {
+        params.set("statuses", "published,claimed");
+      } else {
+        params.set("status", activeTab);
+      }
       if (search) params.set("search", search);
       if (filters.category) params.set("category", filters.category);
       if (filters.location) params.set("location", filters.location);
@@ -57,7 +63,7 @@ export default function LostItemsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [search, filters, page, imageSearchIds]);
+  }, [activeTab, search, filters, page, imageSearchIds]);
 
   useEffect(() => {
     fetchPosts();
@@ -83,6 +89,11 @@ export default function LostItemsPage() {
     setPage(1);
   };
 
+  const handleTabChange = (nextTab: LostItemsTab) => {
+    setActiveTab(nextTab);
+    setPage(1);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 10 }}
@@ -90,6 +101,33 @@ export default function LostItemsPage() {
       transition={{ duration: 0.3 }}
       className="space-y-6"
     >
+      <div className="flex items-center gap-2">
+        <Button
+          type="button"
+          size="sm"
+          variant={activeTab === "all" ? "secondary" : "outline"}
+          onClick={() => handleTabChange("all")}
+        >
+          All
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={activeTab === "published" ? "secondary" : "outline"}
+          onClick={() => handleTabChange("published")}
+        >
+          Published
+        </Button>
+        <Button
+          type="button"
+          size="sm"
+          variant={activeTab === "claimed" ? "secondary" : "outline"}
+          onClick={() => handleTabChange("claimed")}
+        >
+          Claimed
+        </Button>
+      </div>
+
       <SearchBar value={search} onChange={handleSearch} />
 
       <FilterPanel filters={filters} onChange={handleFilterChange} />
