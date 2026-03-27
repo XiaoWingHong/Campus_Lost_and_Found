@@ -14,6 +14,11 @@ import type { PostWithAuthor, PaginatedResponse } from "@/types";
 const PAGE_SIZE = 12;
 type LostItemsTab = "all" | "published" | "claimed";
 
+function getImageSearchStatuses(activeTab: LostItemsTab): string[] {
+  if (activeTab === "all") return ["published", "claimed"];
+  return [activeTab];
+}
+
 export default function LostItemsPage() {
   const [activeTab, setActiveTab] = useState<LostItemsTab>("published");
   const [search, setSearch] = useState("");
@@ -148,6 +153,7 @@ export default function LostItemsPage() {
             <ImageSearchUpload
               onResults={handleImageResults}
               onClear={handleImageClear}
+              statuses={getImageSearchStatuses(activeTab)}
             />
           </div>
         )}

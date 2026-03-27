@@ -11,11 +11,13 @@ import { cn } from "@/lib/utils";
 interface ImageSearchUploadProps {
   onResults: (postIds: string[]) => void;
   onClear: () => void;
+  statuses: string[];
 }
 
 export function ImageSearchUpload({
   onResults,
   onClear,
+  statuses,
 }: ImageSearchUploadProps) {
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
@@ -46,6 +48,7 @@ export function ImageSearchUpload({
     try {
       const formData = new FormData();
       formData.append("image", file);
+      formData.append("statuses", statuses.join(","));
 
       const res = await fetch("/api/posts/search/image", {
         method: "POST",

@@ -6,6 +6,17 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get("image") as File | null;
+    const statusesParam = formData.get("statuses");
+    const allowedStatuses = new Set(["published", "claimed"]);
+    const requestedStatuses = typeof statusesParam === "string"
+      ? statusesParam
+          .split(",")
+          .map((value) => value.trim())
+          .filter((value) => allowedStatuses.has(value))
+      : ["published"];
+    const statusFilterSet = new Set(
+      requestedStatuses.length > 0 ? requestedStatuses : ["published"]
+    );
 
     if (!file) {
       return NextResponse.json(
@@ -33,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     const posts = getPosts();
     const storedEntries = posts
-      .filter((p) => p.status === "published" && p.siftDescriptors)
+      .filter((p) => statusFilterSet.has(p.status) && p.siftDescriptors)
       .map((p) => ({
         postId: p.id,
         descriptors: p.siftDescriptors!,
