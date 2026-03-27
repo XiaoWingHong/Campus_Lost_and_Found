@@ -69,6 +69,22 @@ export default function AdminPostsPage() {
   } | null>(null);
   const [isActioning, setIsActioning] = useState(false);
 
+  const openPostDetails = useCallback(async (post: PostWithClaim) => {
+    setSelectedPost(post);
+    try {
+      const response = await fetch(`/api/posts/${post.id}`);
+      if (!response.ok) return;
+      const json = await response.json();
+      const detailedPost: PostWithClaim | undefined = json.data;
+      if (detailedPost) {
+        setSelectedPost(detailedPost);
+      }
+    } catch {
+      // Keep the list data in dialog if the detail fetch fails
+      toast.error("Unable to load full post details");
+    }
+  }, []);
+
   const fetchStats = useCallback(async () => {
     try {
       const statuses: PostStatus[] = ["published", "claimed", "rejected", "cancelled"];
@@ -287,7 +303,7 @@ export default function AdminPostsPage() {
                   variant="ghost"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => setSelectedPost(post)}
+                  onClick={() => openPostDetails(post)}
                   title="View details"
                 >
                   <Eye className="h-4 w-4" />
