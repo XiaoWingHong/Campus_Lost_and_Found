@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPosts } from "@/lib/db";
-import { extractDescriptors, matchImages } from "@/lib/sift";
+import { extractDescriptors, matchImages, buildRuntimeStoredEntries } from "@/lib/sift";
+
+const MAX_RUNTIME_MATCH_CANDIDATES = 120;
 
 export async function POST(request: NextRequest) {
   try {
@@ -43,12 +45,21 @@ export async function POST(request: NextRequest) {
     }
 
     const posts = getPosts();
-    const storedEntries = posts
-      .filter((p) => statusFilterSet.has(p.status) && p.siftDescriptors)
-      .map((p) => ({
-        postId: p.id,
-        descriptors: p.siftDescriptors!,
+    const runtimeCandidates = posts
+      .filter(
+        (post) =>
+          statusFilterSet.has(post.status) &&
+          Array.isArray(post.photos) &&
+          post.photos.length > 0 &&
+          typeof post.photos[0] === "string",
+      )
+      .slice(0, MAX_RUNTIME_MATCH_CANDIDATES)
+      .map((post) => ({
+        postId: post.id,
+        photoPath: post.photos[0],
       }));
+
+    const storedEntries = await buildRuntimeStoredEntries(runtimeCandidates);
 
     const matches = matchImages(queryDescriptors, storedEntries)
       .filter((m) => m.confidence != "low")

@@ -3,15 +3,13 @@ import path from "path";
 import sharp from "sharp";
 
 /**
- * Simplified image similarity search for the prototype.
+ * Hybrid image matching combining color histogram with optional SIFT features.
  *
- * Uses color histogram comparison via proper pixel decoding (sharp).
- * Images are resized to a fixed 64×64 grid before histogram computation
- * so that results are stable regardless of the original image dimensions
- * or file format.
+ * Primary approach: Color histogram (always works, reliable)
+ * Secondary approach: SIFT features (if OpenCV available, structural matching)
  *
- * The API surface matches what a full SIFT implementation would expose so it
- * can be swapped out without changing calling code.
+ * SIFT features are stored separately without nested base64 encoding to avoid
+ * serialization issues and keep the descriptor format simple and predictable.
  */
 
 interface ColorHistogram {
@@ -20,8 +18,20 @@ interface ColorHistogram {
   b: number[];
 }
 
+interface SimpleDescriptor {
+  type: "histogram" | "hybrid";
+  histogram: ColorHistogram;
+  siftFeatures?: {
+    keyCount: number;
+    matchScore: number;
+  };
+}
+
 const HISTOGRAM_BINS = 16;
 const SAMPLE_SIZE = 64;
+const SIFT_WEIGHT = 0.6;
+const HISTOGRAM_WEIGHT = 0.4;
+const FILE_DESCRIPTOR_CACHE = new Map<string, string>();
 
 async function bufferToPixels(
   buffer: Buffer
@@ -77,18 +87,79 @@ function histogramSimilarity(a: ColorHistogram, b: ColorHistogram): number {
   return score / 3;
 }
 
+async function extractSiftFeatures(
+  imageBuffer: Buffer
+): Promise<{ keyCount: number; matchScore: number } | null> {
+  try {
+    // Try to use OpenCV.js if available
+    // @ts-ignore
+    const cv = require("opencv.js");
+    if (!cv) return null;
+
+    const mat = cv.imdecode(imageBuffer, cv.IMREAD_GRAYSCALE);
+    if (!mat || mat.empty()) {
+      mat?.delete();
+      return null;
+    }
+
+    const sift = cv.SIFT_create();
+    const keypoints: any[] = [];
+    const descriptors = new cv.Mat();
+
+    sift.detectAndCompute(mat, new cv.Mat(), keypoints, descriptors);
+
+    const keyCount = keypoints.length;
+    const descriptorCount = descriptors.rows || 0;
+
+    mat.delete();
+    sift.delete();
+    descriptors.delete();
+
+    if (keyCount > 0 && descriptorCount > 0) {
+      return {
+        keyCount,
+        matchScore: Math.min(keyCount / 100, 1),
+      };
+    }
+
+    return null;
+  } catch (error) {
+    return null;
+  }
+}
+
 export async function extractDescriptors(imageBuffer: Buffer): Promise<string | null> {
   const pixels = await bufferToPixels(imageBuffer);
   if (!pixels) return null;
+
   const histogram = computeHistogram(pixels);
-  return Buffer.from(JSON.stringify(histogram)).toString("base64");
+
+  let descriptor: SimpleDescriptor = {
+    type: "histogram",
+    histogram,
+  };
+
+  const siftFeatures = await extractSiftFeatures(imageBuffer);
+  if (siftFeatures) {
+    descriptor.type = "hybrid";
+    descriptor.siftFeatures = siftFeatures;
+  }
+
+  return JSON.stringify(descriptor);
 }
 
 export async function extractDescriptorsFromFile(filePath: string): Promise<string | null> {
+  const cachedDescriptor = FILE_DESCRIPTOR_CACHE.get(filePath);
+  if (cachedDescriptor) return cachedDescriptor;
+
   try {
     const absolutePath = path.join(process.cwd(), "public", filePath);
     const buffer = readFileSync(absolutePath);
-    return extractDescriptors(buffer);
+    const descriptors = await extractDescriptors(buffer);
+    if (descriptors) {
+      FILE_DESCRIPTOR_CACHE.set(filePath, descriptors);
+    }
+    return descriptors;
   } catch {
     return null;
   }
@@ -104,11 +175,13 @@ export function matchImages(
   queryDescriptors: string,
   storedEntries: { postId: string; descriptors: string }[]
 ): MatchResult[] {
-  let queryHistogram: ColorHistogram;
+  let queryDesc: SimpleDescriptor | null = null;
+
   try {
-    queryHistogram = JSON.parse(
-      Buffer.from(queryDescriptors, "base64").toString("utf-8")
-    ) as ColorHistogram;
+    queryDesc = JSON.parse(queryDescriptors);
+    if (!queryDesc || !queryDesc.histogram) {
+      return [];
+    }
   } catch {
     return [];
   }
@@ -117,25 +190,67 @@ export function matchImages(
 
   for (const entry of storedEntries) {
     try {
-      const storedHistogram = JSON.parse(
-        Buffer.from(entry.descriptors, "base64").toString("utf-8")
-      ) as ColorHistogram;
+      const storedDesc: SimpleDescriptor = JSON.parse(entry.descriptors);
+      if (!storedDesc || !storedDesc.histogram) {
+        continue;
+      }
 
-      const score = histogramSimilarity(queryHistogram, storedHistogram);
+      const histScore = histogramSimilarity(queryDesc.histogram, storedDesc.histogram);
+
+      let siftScore = 0;
+      if (
+        queryDesc.type === "hybrid" &&
+        queryDesc.siftFeatures &&
+        storedDesc.type === "hybrid" &&
+        storedDesc.siftFeatures
+      ) {
+        const queryKeys = queryDesc.siftFeatures.keyCount;
+        const storedKeys = storedDesc.siftFeatures.keyCount;
+        siftScore = Math.min(queryKeys, storedKeys) / Math.max(queryKeys, storedKeys);
+      }
+
+      const combinedScore =
+        queryDesc.type === "hybrid" && storedDesc.type === "hybrid"
+          ? SIFT_WEIGHT * siftScore + HISTOGRAM_WEIGHT * histScore
+          : histScore;
 
       let confidence: MatchResult["confidence"];
-      if (score >= 0.7) confidence = "high";
-      else if (score >= 0.45) confidence = "medium";
-      else if (score >= 0.3) confidence = "low";
+      if (combinedScore >= 0.7) confidence = "high";
+      else if (combinedScore >= 0.4) confidence = "medium";
+      else if (combinedScore >= 0.2) confidence = "low";
       else continue;
 
-      console.log(score);
-
-      results.push({ postId: entry.postId, score, confidence });
-    } catch {
+      results.push({ postId: entry.postId, score: combinedScore, confidence });
+    } catch (error) {
       continue;
     }
   }
 
   return results.sort((a, b) => b.score - a.score).slice(0, 10);
+}
+
+export async function buildRuntimeStoredEntries(
+  entries: { postId: string; photoPath: string }[],
+  maxConcurrentJobs = 6,
+): Promise<{ postId: string; descriptors: string }[]> {
+  if (entries.length === 0) return [];
+
+  const storedEntries: { postId: string; descriptors: string }[] = [];
+  let currentIndex = 0;
+
+  const worker = async () => {
+    while (currentIndex < entries.length) {
+      const indexToProcess = currentIndex;
+      currentIndex += 1;
+      const entry = entries[indexToProcess];
+      const descriptors = await extractDescriptorsFromFile(entry.photoPath);
+      if (descriptors) {
+        storedEntries.push({ postId: entry.postId, descriptors });
+      }
+    }
+  };
+
+  const workerCount = Math.min(maxConcurrentJobs, entries.length);
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+  return storedEntries;
 }
