@@ -44,6 +44,8 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(1, Math.min(100, parseInt(searchParams.get("limit") ?? "12", 10)));
     const authorId = searchParams.get("authorId");
     const claimedByMe = searchParams.get("claimedByMe") === "true";
+    const hasIdsFilter = searchParams.has("ids");
+    const idsParam = searchParams.get("ids");
 
     const currentUser = await getCurrentUser();
     const isAdmin = currentUser?.role === "admin";
@@ -132,6 +134,20 @@ export async function GET(request: NextRequest) {
 
     if (authorId) {
       filtered = filtered.filter((p) => p.authorId === authorId);
+    }
+
+    if (hasIdsFilter) {
+      const requestedPostIds = new Set(
+        (idsParam ?? "")
+          .split(",")
+          .map((value) => value.trim())
+          .filter((value) => value.length > 0),
+      );
+      if (requestedPostIds.size === 0) {
+        filtered = [];
+      } else {
+        filtered = filtered.filter((post) => requestedPostIds.has(post.id));
+      }
     }
 
     if (claimedByMe) {

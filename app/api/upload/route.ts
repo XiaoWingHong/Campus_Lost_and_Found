@@ -3,6 +3,8 @@ import { writeFileSync, mkdirSync, existsSync } from "fs";
 import path from "path";
 import { v4 as uuidv4 } from "uuid";
 import { requireAuth } from "@/lib/auth";
+import { updatePost } from "@/lib/db";
+import { extractDescriptors } from "@/lib/sift";
 
 const MAX_FILES = 5;
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
@@ -63,6 +65,7 @@ export async function POST(request: NextRequest) {
     }
 
     const savedPaths: string[] = [];
+    let firstBuffer: Buffer | null = null;
 
     for (const file of files) {
       const buffer = Buffer.from(await file.arrayBuffer());
@@ -77,6 +80,15 @@ export async function POST(request: NextRequest) {
 
       writeFileSync(filePath, buffer);
       savedPaths.push(`/uploads/${postId}/${filename}`);
+
+      if (!firstBuffer) firstBuffer = buffer;
+    }
+
+    if (firstBuffer) {
+      const siftDescriptors = await extractDescriptors(firstBuffer);
+      if (siftDescriptors) {
+        updatePost(postId, { siftDescriptors });
+      }
     }
 
     return NextResponse.json({ success: true, data: savedPaths }, { status: 201 });

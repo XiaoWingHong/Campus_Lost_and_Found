@@ -1,13 +1,14 @@
 import { readFileSync } from "fs";
 import path from "path";
+import sharp from "sharp";
 
 /**
  * Simplified image similarity search for the prototype.
  *
- * In production this would use OpenCV SIFT (Scale-Invariant Feature Transform)
- * with BFMatcher + Lowe's ratio test. For this prototype we use a color
- * histogram comparison approach that provides a reasonable approximation
- * without native dependencies.
+ * Uses color histogram comparison via proper pixel decoding (sharp).
+ * Images are resized to a fixed 64×64 grid before histogram computation
+ * so that results are stable regardless of the original image dimensions
+ * or file format.
  *
  * The API surface matches what a full SIFT implementation would expose so it
  * can be swapped out without changing calling code.
@@ -20,28 +21,23 @@ interface ColorHistogram {
 }
 
 const HISTOGRAM_BINS = 16;
+const SAMPLE_SIZE = 64;
 
-function bufferToPixels(
+async function bufferToPixels(
   buffer: Buffer
-): { r: number; g: number; b: number }[] | null {
+): Promise<{ r: number; g: number; b: number }[] | null> {
   try {
-    const pixels: { r: number; g: number; b: number }[] = [];
-    const header = buffer.slice(0, 4).toString("hex");
+    const { data, info } = await sharp(buffer)
+      .resize(SAMPLE_SIZE, SAMPLE_SIZE, { fit: "fill" })
+      .removeAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
 
-    if (header.startsWith("ffd8ff")) {
-      // JPEG — sample raw bytes as approximation
-      for (let i = 0; i < buffer.length - 2; i += 3) {
-        pixels.push({ r: buffer[i], g: buffer[i + 1], b: buffer[i + 2] });
-      }
-    } else if (header.startsWith("89504e47")) {
-      // PNG — sample raw bytes after header
-      for (let i = 8; i < buffer.length - 2; i += 3) {
-        pixels.push({ r: buffer[i], g: buffer[i + 1], b: buffer[i + 2] });
-      }
-    } else {
-      for (let i = 0; i < buffer.length - 2; i += 3) {
-        pixels.push({ r: buffer[i], g: buffer[i + 1], b: buffer[i + 2] });
-      }
+    const pixels: { r: number; g: number; b: number }[] = [];
+    const channels = info.channels;
+
+    for (let i = 0; i < data.length; i += channels) {
+      pixels.push({ r: data[i], g: data[i + 1], b: data[i + 2] });
     }
 
     return pixels.length > 0 ? pixels : null;
@@ -81,14 +77,14 @@ function histogramSimilarity(a: ColorHistogram, b: ColorHistogram): number {
   return score / 3;
 }
 
-export function extractDescriptors(imageBuffer: Buffer): string | null {
-  const pixels = bufferToPixels(imageBuffer);
+export async function extractDescriptors(imageBuffer: Buffer): Promise<string | null> {
+  const pixels = await bufferToPixels(imageBuffer);
   if (!pixels) return null;
   const histogram = computeHistogram(pixels);
   return Buffer.from(JSON.stringify(histogram)).toString("base64");
 }
 
-export function extractDescriptorsFromFile(filePath: string): string | null {
+export async function extractDescriptorsFromFile(filePath: string): Promise<string | null> {
   try {
     const absolutePath = path.join(process.cwd(), "public", filePath);
     const buffer = readFileSync(absolutePath);
@@ -129,9 +125,11 @@ export function matchImages(
 
       let confidence: MatchResult["confidence"];
       if (score >= 0.7) confidence = "high";
-      else if (score >= 0.4) confidence = "medium";
-      else if (score >= 0.2) confidence = "low";
+      else if (score >= 0.45) confidence = "medium";
+      else if (score >= 0.3) confidence = "low";
       else continue;
+
+      console.log(score);
 
       results.push({ postId: entry.postId, score, confidence });
     } catch {

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const queryDescriptors = extractDescriptors(buffer);
+    const queryDescriptors = await extractDescriptors(buffer);
 
     if (!queryDescriptors) {
       return NextResponse.json(
@@ -39,7 +39,9 @@ export async function POST(request: NextRequest) {
         descriptors: p.siftDescriptors!,
       }));
 
-    const matches = matchImages(queryDescriptors, storedEntries);
+    const matches = matchImages(queryDescriptors, storedEntries)
+      .filter((m) => m.confidence != "low")
+      .sort((a, b) => b.score - a.score);
 
     return NextResponse.json({ success: true, data: matches });
   } catch {

@@ -43,7 +43,7 @@ export default function LostItemsPage() {
       } else {
         params.set("status", activeTab);
       }
-      if (search) params.set("search", search);
+      if (search) params.set("q", search);
       if (filters.category) params.set("category", filters.category);
       if (filters.location) params.set("location", filters.location);
       if (filters.dateFrom) params.set("dateFrom", filters.dateFrom);
