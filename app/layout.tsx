@@ -27,8 +27,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${lora.variable} ${dmSans.variable}`}>
-      <body className="font-sans antialiased min-h-screen bg-background">
+    <html lang="en" className={`${lora.variable} ${dmSans.variable}`} suppressHydrationWarning>
+      <body className="font-sans antialiased min-h-screen bg-background" suppressHydrationWarning>
         {children}
         <Toaster richColors position="top-right" />
       </body>
