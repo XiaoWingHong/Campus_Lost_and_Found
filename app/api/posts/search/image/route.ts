@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPosts } from "@/lib/db";
-import { extractDescriptors, matchImages, buildRuntimeStoredEntries } from "@/lib/sift";
+import { matchImages } from "@/lib/sift";
 
 const MAX_RUNTIME_MATCH_CANDIDATES = 120;
 
@@ -34,10 +34,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const queryDescriptors = await extractDescriptors(buffer);
+    const queryImagebuffer = Buffer.from(await file.arrayBuffer());
 
-    if (!queryDescriptors) {
+    if (!queryImagebuffer) {
       return NextResponse.json(
         { success: false, error: "Failed to process image" },
         { status: 400 },
@@ -45,7 +44,7 @@ export async function POST(request: NextRequest) {
     }
 
     const posts = getPosts();
-    const runtimeCandidates = posts
+    const candidates = posts
       .filter(
         (post) =>
           statusFilterSet.has(post.status) &&
@@ -53,16 +52,11 @@ export async function POST(request: NextRequest) {
           post.photos.length > 0 &&
           typeof post.photos[0] === "string",
       )
-      .slice(0, MAX_RUNTIME_MATCH_CANDIDATES)
-      .map((post) => ({
-        postId: post.id,
-        photoPath: post.photos[0],
-      }));
+      .slice(0, MAX_RUNTIME_MATCH_CANDIDATES);
 
-    const storedEntries = await buildRuntimeStoredEntries(runtimeCandidates);
-
-    const matches = matchImages(queryDescriptors, storedEntries)
-      .filter((m) => m.confidence != "low")
+    const matchResults = await matchImages(queryImagebuffer, candidates);
+    const matches = matchResults
+      .filter((m) => m.score > 0.6)
       .sort((a, b) => b.score - a.score);
 
     return NextResponse.json({ success: true, data: matches });
