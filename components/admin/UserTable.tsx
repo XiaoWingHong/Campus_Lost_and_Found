@@ -68,9 +68,8 @@ export function UserTable({ users, onRoleChange }: UserTableProps) {
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>Name</TableHead>
-              <TableHead>EID</TableHead>
+              <TableHead>SID</TableHead>
               <TableHead>Role</TableHead>
-              <TableHead className="hidden sm:table-cell">Posts</TableHead>
               <TableHead className="hidden md:table-cell">Created</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -90,7 +89,7 @@ export function UserTable({ users, onRoleChange }: UserTableProps) {
                 <TableRow key={user.id}>
                   <TableCell className="font-medium">{user.name}</TableCell>
                   <TableCell className="font-mono text-xs">
-                    {maskEid(user.eid)}
+                    {user.sid || "-"}
                   </TableCell>
                   <TableCell>
                     <Badge
@@ -99,9 +98,6 @@ export function UserTable({ users, onRoleChange }: UserTableProps) {
                     >
                       {user.role}
                     </Badge>
-                  </TableCell>
-                  <TableCell className="hidden sm:table-cell text-muted-foreground">
-                    &mdash;
                   </TableCell>
                   <TableCell className="hidden md:table-cell text-muted-foreground text-sm">
                     {formatDate(user.createdAt)}
